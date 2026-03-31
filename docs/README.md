@@ -160,3 +160,13 @@ value field and data field of the transaction in above instance are populated.
 2. The implementation (logic) contract - contains active buisness logic, it's stateless and provides code for proxy to execute.
 #### + `delegatecall` - low-level EVM opcode
 A -> B : A delegatecall to B,  code in B is esecuted within context of A. code is read from B and written to A's storage. `msg.sender` and `msg.value` remain as those of A.
+
+### `selfdestruct`
+- `selfdestruct` force-sends ETH to a target address and removes the contract's code and storage.
+- The recipient's `fallback`/`receive` is not executed; ETH is credited directly.
+- Attackers can force ETH into a contract and break assumptions that rely on `address(this).balance` being driven only by your functions.
+- Post-Cancun (EIP-6780), `selfdestruct` no longer fully deletes contracts except when called in the same transaction as creation, but forced ETH still matters.
+- Examples:
+- `nft/src/self-destruct.sol` shows a game that can be broken by forced ETH.
+- `nft/src/hack-self-destruct.sol` uses `selfdestruct` to grief the game.
+- `nft/src/Proxy.sol` and `nft/src/proxy.sol` are proxy/delegatecall examples related to upgradeability, not `selfdestruct`, but are included here for study alongside call-context behavior.

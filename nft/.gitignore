@@ -2,6 +2,9 @@
 cache/
 out/
 lib/*
+.deps/
+.states/
+artifacts/
 
 # Ignores development broadcast logs
 !/broadcast
