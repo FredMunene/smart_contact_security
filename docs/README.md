@@ -1,3 +1,40 @@
+### Repo Metrics
+
+As of `2026-04-06`, the Solidity metrics for this workspace are:
+
+| Scope | Files | nSLOC / CLOC* | Estimated complexity | Max function complexity |
+|---|---:|---:|---:|---:|
+| Full Solidity tree (`src/` + `script/` + `test/`) | 46 | 6,201 | 1,066 | 31 |
+| Audit surface only (`src/` + `script/`) | 14 | 236 | 22 | 2 |
+
+By project, the full Solidity tree breaks down as:
+
+| Project | Files | nSLOC / CLOC* | Estimated complexity | Max function complexity |
+|---|---:|---:|---:|---:|
+| `smart_contact_security/nft` | 11 | 135 | 21 | 2 |
+| `battlechain/accountable_protocol` | 31 | 5,607 | 1,020 | 31 |
+| `battlechain/remora` | 4 | 459 | 25 | 2 |
+
+* `nSLOC / CLOC` means non-empty, non-comment Solidity lines.
+- Count Lines of Code (CLOC)
+- Normalized Source Lines of Code (nSLOC)
+
+#### How this was computed
+
+- I scanned all `*.sol` files in the repo with a local script.
+- I excluded vendored dependencies in `lib/` and generated build artifacts in `out/`.
+- For each Solidity file, I counted:
+  - total lines
+  - blank lines
+  - comment lines
+  - code lines
+- `nSLOC / CLOC` is the number of non-empty lines that are not comments.
+- The complexity score is a source-based cyclomatic estimate per function:
+  - base score of `1`
+  - `+1` for each `if`, `for`, `while`, `case`, or `catch`
+  - `+1` for each `&&`, `||`, or ternary `?`
+- The project totals are the sum of all files in scope.
+
 ### Data Location
 `Calldata` variables are read-only and cheaper than memory. They are mostly used for input parameters.
 
