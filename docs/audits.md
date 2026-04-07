@@ -74,3 +74,34 @@ Final Report : focuses on fixes made to address initial report's issues.
 3. Price Oracle Manipulation
 4. Insifficient Access Controls
 5. Re-entracy (and Read-Only Re-entracy)
+
+# STEPS
+
+## 1. Audit Readiness
++ [Rekt Test](https://blog.trailofbits.com/2023/08/14/can-you-pass-the-rekt-test/)
+
+1. All actors, roles, and privileges documented?
+2. 
+..
+12. 
+
+Client should show commitment to security in their codebase.
+
+## 2. Onboarding Questions
+1. check out [onboarding questions](https://github.com/Cyfrin/security-and-auditing-full-course-s23/blob/main/minimal-onboarding-questions.md)
+2. check out [detailed onoarding questions](https://github.com/Cyfrin/security-and-auditing-full-course-s23/blob/main/extensive-onboarding-questions.md)
+
+3. About the project and business logic
+4. Statistics; size of codebase, to estimate timeline  : SLOC,
+ CLOC -  count blank lines, comment lines and physical lines of source code
+5. Setup
+6. Review scope; Exact commit hash. Github URL.
+7. Compatibilities; versions, chains, tokens
+8. Roles and powers
+9. Known issues  `cloc ./src/`
+
++ Read through
++ Check tests
+
+## 4. Reporting
+[template](https://github.com/Cyfrin/security-and-auditing-full-course-s23/blob/main/finding_layout.md)
