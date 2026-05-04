@@ -64,3 +64,21 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+
+## How to determining a finding's severity
+
+The severity of a finding is determined based on the potential impact and likelihood of exploitation. The following criteria can be used to classify findings into different severity levels:
++ High : funds are directly or nearly directly at risk, severe disruption of protocol functionality or availability. Highly probably to happen.
++ Medium : funds indirectly at risk or some level of disruption. Might occur under specific conditions.
++ Low Security : funds not at risk. unlikely to occur.
+
+Impact vs Likelihood
+| Impact \ Likelihood | High | Medium | Low |
+|--------------------|------|--------|-----|
+| High               | High | High   | Medium |
+| Medium             | High | Medium | Low    |
+| Low                | Medium | Low    | Low    |
+
+How likely is it that somebody will be able to exploit this? - `High`
+How much damage could be caused if somebody were to exploit this? - `High`
