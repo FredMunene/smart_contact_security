@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.6;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 import {PuppyRaffle} from "../src/PuppyRaffle.sol";
+import {ReentrancyAttacker} from "../src/ReentracyAttacker.sol";
 
 contract PuppyRaffleTest is Test {
     PuppyRaffle puppyRaffle;
@@ -75,6 +76,32 @@ contract PuppyRaffleTest is Test {
         puppyRaffle.enterRaffle{value: entranceFee * 3}(players);
     }
 
+    function testEnterRaffleGasIncreasesWithMorePlayers() public {
+        PuppyRaffle smallRaffle = new PuppyRaffle(entranceFee, feeAddress, duration);
+        PuppyRaffle largeRaffle = new PuppyRaffle(entranceFee, feeAddress, duration);
+
+        _seedRaffle(smallRaffle, 10);
+        _seedRaffle(largeRaffle, 100);
+
+        address[] memory newPlayer = new address[](1);
+        newPlayer[0] = address(111);
+
+        uint256 gasBefore = gasleft();
+        smallRaffle.enterRaffle{value: entranceFee}(newPlayer);
+        uint256 gasUsedSmall = gasBefore - gasleft();
+
+        newPlayer[0] = address(222);
+        gasBefore = gasleft();
+        largeRaffle.enterRaffle{value: entranceFee}(newPlayer);
+        uint256 gasUsedLarge = gasBefore - gasleft();
+        console2.log("Gas used for small raffle:", gasUsedSmall);
+        console2.log("Gas used for large raffle:", gasUsedLarge);
+
+
+
+        assertGt(gasUsedLarge, gasUsedSmall);
+    }
+
     //////////////////////
     /// Refund         ///
     /////////////////////
@@ -111,6 +138,15 @@ contract PuppyRaffleTest is Test {
         puppyRaffle.refund(indexOfPlayer);
     }
 
+    function test_reentrancyRefund() public {
+        //  create a malicious contract that will call refund and then try to call refund again in the same transaction
+        address attacker = address(new ReentrancyAttacker(puppyRaffle));
+        vm.deal(attacker, entranceFee);
+        vm.prank(attacker);
+        attacker.call{value: entranceFee}(abi.encodeWithSignature("attack()"));
+        
+    }
+
     //////////////////////
     /// getActivePlayerIndex         ///
     /////////////////////
@@ -124,6 +160,16 @@ contract PuppyRaffleTest is Test {
         assertEq(puppyRaffle.getActivePlayerIndex(playerTwo), 1);
     }
 
+    function testPlayerAtIndexZero() public {
+        address[] memory players = new address[](2);
+        players[0] = playerOne;
+        players[1] = playerTwo;
+        puppyRaffle.enterRaffle{value: entranceFee * 2}(players);
+
+        assertEq(puppyRaffle.getActivePlayerIndex(playerOne), 0);
+        assertEq(puppyRaffle.getActivePlayerIndex(playerThree), 0);
+    }
+
     //////////////////////
     /// selectWinner         ///
     /////////////////////
@@ -135,6 +181,14 @@ contract PuppyRaffleTest is Test {
         players[3] = playerFour;
         puppyRaffle.enterRaffle{value: entranceFee * 4}(players);
         _;
+    }
+
+    function _seedRaffle(PuppyRaffle raffle, uint256 numberOfPlayers) internal {
+        address[] memory players = new address[](numberOfPlayers);
+        for (uint256 i = 0; i < numberOfPlayers; i++) {
+            players[i] = address(uint160(i + 1));
+        }
+        raffle.enterRaffle{value: entranceFee * numberOfPlayers}(players);
     }
 
     function testCantSelectWinnerBeforeRaffleEnds() public playersEntered {
@@ -171,6 +225,19 @@ contract PuppyRaffleTest is Test {
         vm.roll(block.number + 1);
 
         uint256 expectedPayout = ((entranceFee * 4) * 80 / 100);
+
+        puppyRaffle.selectWinner();
+        assertEq(address(playerFour).balance, balanceBefore + expectedPayout);
+    }
+
+
+    function testSelectWinnerGets80PercentPaid() public playersEntered {
+        uint256 balanceBefore = address(playerFour).balance;
+
+        vm.warp(block.timestamp + duration + 1);
+        vm.roll(block.number + 1);
+
+        uint256 expectedPayout = ((entranceFee * 4) * 80 * 100 / 100);
 
         puppyRaffle.selectWinner();
         assertEq(address(playerFour).balance, balanceBefore + expectedPayout);
