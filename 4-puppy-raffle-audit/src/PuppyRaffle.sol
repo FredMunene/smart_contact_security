@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.6;
+pragma solidity ^0.8.13;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -21,6 +21,7 @@ contract PuppyRaffle is ERC721, Ownable {
     uint256 public immutable entranceFee;
 
     address[] public players;
+    // @Audit: Unchanging state variables can be declared as immutable or constant to save gas. 
     uint256 public raffleDuration;
     uint256 public raffleStartTime;
     address public previousWinner;
@@ -35,16 +36,19 @@ contract PuppyRaffle is ERC721, Ownable {
     mapping(uint256 => string) public rarityToName;
 
     // Stats for the common puppy (pug)
+     //  @audit : these can be constant
     string private commonImageUri = "ipfs://QmSsYRx3LpDAb1GZQm7zZ1AuHZjfbPkD6J7s9r41xu1mf8";
     uint256 public constant COMMON_RARITY = 70;
     string private constant COMMON = "common";
 
     // Stats for the rare puppy (st. bernard)
+    //  @audit : these can be constant
     string private rareImageUri = "ipfs://QmUPjADFGEKmfohdTaNcWhp7VGk26h5jXDA7v3VtTnTLcW";
     uint256 public constant RARE_RARITY = 25;
     string private constant RARE = "rare";
 
     // Stats for the legendary puppy (shiba inu)
+     //  @audit : these can be constant
     string private legendaryImageUri = "ipfs://QmYx6GsYAKnNzZ9A6NvEKV9nf1VaDzJrqDR23Y8YSkebLU";
     uint256 public constant LEGENDARY_RARITY = 5;
     string private constant LEGENDARY = "legendary";
@@ -77,6 +81,8 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @notice duplicate entrants are not allowed
     /// @param newPlayers the list of players to enter the raffle
     function enterRaffle(address[] memory newPlayers) public payable {
+        // @q were custom reverse a thing in 0.7.6 of solidity
+        // @audit what if array is empty
         require(msg.value == entranceFee * newPlayers.length, "PuppyRaffle: Must send enough to enter raffle");
         for (uint256 i = 0; i < newPlayers.length; i++) {
             players.push(newPlayers[i]);
@@ -84,6 +90,8 @@ contract PuppyRaffle is ERC721, Ownable {
 
         // @ audit : when is time started
 
+
+        // denial of service bag : attacker sends extra long array of players to fill up storage and make it impossible for anyone else to enter the raffle or get a refund
         // Check for duplicates
         for (uint256 i = 0; i < players.length - 1; i++) {
             for (uint256 j = i + 1; j < players.length; j++) {
@@ -115,6 +123,7 @@ contract PuppyRaffle is ERC721, Ownable {
                 return i;
             }
         }
+        // @audit this undermines player at index 0 
         return 0;
     }
 
@@ -127,27 +136,33 @@ contract PuppyRaffle is ERC721, Ownable {
     function selectWinner() external {
         require(block.timestamp >= raffleStartTime + raffleDuration, "PuppyRaffle: Raffle not over");
         require(players.length >= 4, "PuppyRaffle: Need at least 4 players");
-        uint256 winnerIndex =
-            uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, block.difficulty))) % players.length;
+        // @audit : randomness
+        uint256 winnerIndex = uint256(keccak256(abi.encodePacked(msg.sender, block.timestamp, block.difficulty))) % players.length;
         address winner = players[winnerIndex];
+        // @audit : why not just take the fee from the msg.value instead of calculating it from the total amount collected?
         uint256 totalAmountCollected = players.length * entranceFee;
-        //  @audit : decimals
+        //  @audit : decimals arithemtic may lead to precision loss
         uint256 prizePool = (totalAmountCollected * 80) / 100; 
         uint256 fee = (totalAmountCollected * 20) / 100;
+        // @Audit: Total fees the owner should be able to collect. Why the casting? Overflow.
         totalFees = totalFees + uint64(fee);
 
+        //  @audit : what is totalSupply?
+        // @answer: our ERC721 inheritance and is returning _tokenOwners.length
         uint256 tokenId = totalSupply();
 
         // We use a different RNG calculate from the winnerIndex to determine rarity
         uint256 rarity = uint256(keccak256(abi.encodePacked(msg.sender, block.difficulty))) % 100;
-        if (rarity <= COMMON_RARITY) {
+        if (rarity <= COMMON_RARITY) {  // rarity < 70 means common
             tokenIdToRarity[tokenId] = COMMON_RARITY;
-        } else if (rarity <= COMMON_RARITY + RARE_RARITY) {
+        } else if (rarity <= COMMON_RARITY + RARE_RARITY) { // rarity between 70 and 95 is rare
             tokenIdToRarity[tokenId] = RARE_RARITY;
         } else {
-            tokenIdToRarity[tokenId] = LEGENDARY_RARITY;
+            tokenIdToRarity[tokenId] = LEGENDARY_RARITY; // rarity between 95 and 100 is legendary
         }
 
+
+        // CEI pattern to prevent reentrancy attacks
         delete players;
         raffleStartTime = block.timestamp;
         previousWinner = winner;
@@ -172,6 +187,7 @@ contract PuppyRaffle is ERC721, Ownable {
         emit FeeAddressChanged(newFeeAddress);
     }
 
+    // @audit : not used in contract
     /// @notice this function will return true if the msg.sender is an active player
     function _isActivePlayer() internal view returns (bool) {
         for (uint256 i = 0; i < players.length; i++) {
